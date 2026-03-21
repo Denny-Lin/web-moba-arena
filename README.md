@@ -19,7 +19,7 @@ mobile).
 
 ## Preview
 
-<img width="1536" height="1024" alt="sample" src="https://github.com/user-attachments/assets/6e091dd4-0411-4822-a699-485b0da33efa" />
+<img width="1536" height="1024" alt="sample" src="https://github.com/user-attachments/assets/5e047207-cdd0-4d7b-a891-073bd0c314b4" />
 
 ---
 
