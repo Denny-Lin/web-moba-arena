@@ -81,7 +81,7 @@ cd client && npm run dev
 
 ------------------------------------------------------------------------
 
-## 🎮 Gameplay Flow
+## Gameplay Flow
 
 1.  Player enters the game
 2.  Selects a character
@@ -90,6 +90,49 @@ cd client && npm run dev
 5.  Match ends → restart
 
 ------------------------------------------------------------------------
+## Scaling & Hosting Options
+
+### Current Setup (Render - Free Tier)
+- Suitable for: 2–10 players
+- Pros:
+  - Free and easy to deploy
+  - Good for development and demos
+- Cons:
+  - Cold start delay (~30–60s)
+  - Server sleeps when inactive
+  - Shared CPU (minor performance fluctuation)
+
+---
+
+### Alternative Hosting Options
+
+#### Fly.io
+- Suitable for: 2–30 players
+- Pros:
+  - No cold start (always running)
+  - Better real-time performance
+- Cost:
+  - ~$1–5/month for small instances
+
+---
+
+#### VPS (e.g. DigitalOcean / Vultr)
+- Suitable for: 10–50+ players (depending on optimization)
+- Pros:
+  - Full control over server
+  - Stable performance (dedicated resources)
+- Cost:
+  - ~$5/month (basic server)
+
+---
+
+### Scaling Strategy
+
+- Start with Render (development & testing)
+- Move to Fly.io when real-time experience is needed
+- Upgrade to VPS when player count increases
+
+---
 
 ## Notes
 
