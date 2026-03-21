@@ -89,7 +89,15 @@ cd client && npm run dev
 4.  Battles other players
 5.  Match ends → restart
 
+### Game Mode
+
+- Simple room-based multiplayer (no matchmaking system)
+- Players join a room and start playing immediately
+- No lobby, ranking, or queue system
+- Designed for quick sessions and easy testing
+
 ------------------------------------------------------------------------
+
 ## Scaling & Hosting Options
 
 ### Current Setup (Render - Free Tier)
