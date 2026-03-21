@@ -41,12 +41,29 @@ mobile).
 
 ## Architecture
 
-Client (Browser / Mobile) - Three.js (Rendering) - Input Handling ↓
-WebSocket ↓ Server (Colyseus) - Game State - Player Sync - Combat Logic
+```
+Client (Browser / Mobile) 
+- Three.js (Rendering)
+- Input Handling
+    ↓
+WebSocket
+    ↓
+Server (Colyseus)
+- Game State
+- Player Sync
+- Combat Logic
+```
 
 ------------------------------------------------------------------------
 
-## Getting Started
+## Deployment
+| Layer     | Technology        | Hosting |
+|----------|------------------|--------|
+| Client   | Three.js (WebGL) | Browser |
+| Server   | Colyseus (Node)  | Render |
+| Protocol | WebSocket        | - |
+
+---
 
 ### 1. Clone repo
 
@@ -66,16 +83,16 @@ cd client && npm run dev
 
 ## 🎮 Gameplay Flow
 
-1.  Player enters the game\
-2.  Selects a character\
-3.  Joins a match (room)\
-4.  Battles other players\
+1.  Player enters the game
+2.  Selects a character
+3.  Joins a match (room)
+4.  Battles other players
 5.  Match ends → restart
 
 ------------------------------------------------------------------------
 
 ## Notes
 
--   Stateless game (no persistent data)
--   Server reset will not affect gameplay
--   Designed for small matches (2--10 players)
+- Stateless architecture (no persistent data storage)
+- Server resets do not impact gameplay sessions
+- Optimized for small matches (2–10 players)
