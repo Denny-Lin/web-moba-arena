@@ -9,10 +9,57 @@ type PlayerState = {
   z: number;
   ready: boolean;
   character: string;
+  name: string;
   team: Team | null;
   slotIndex: number | null;
   isBot: boolean;
   hp: number;
+};
+
+const NAME_POOL = [
+  "Aiden",
+  "Mia",
+  "Noah",
+  "Luna",
+  "Kai",
+  "Nova",
+  "Ezra",
+  "Ruby",
+  "Leo",
+  "Ivy",
+  "Zane",
+  "Milo",
+  "Aria",
+  "Finn",
+  "Nora",
+  "Jasper",
+  "Ella",
+  "Toby",
+  "Cora",
+  "Riven",
+];
+
+const NAME_TO_CHARACTER: Record<string, string> = {
+  Aiden: "Warrior",
+  Mia: "Mage",
+  Noah: "Archer",
+  Luna: "Assassin",
+  Kai: "Tank",
+  Nova: "Healer",
+  Ezra: "Ranger",
+  Ruby: "Knight",
+  Leo: "Warrior",
+  Ivy: "Mage",
+  Zane: "Archer",
+  Milo: "Assassin",
+  Aria: "Tank",
+  Finn: "Healer",
+  Nora: "Ranger",
+  Jasper: "Knight",
+  Ella: "Warrior",
+  Toby: "Mage",
+  Cora: "Archer",
+  Riven: "Assassin",
 };
 
 const hostname = window.location.hostname;
@@ -35,6 +82,8 @@ let players: Record<string, PlayerState> = {};
 let myPos = { x: 0, z: 0 };
 let myReady = false;
 let myTeam: Team | null = null;
+let myName = NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)];
+let myCharacter = NAME_TO_CHARACTER[myName] ?? "Warrior";
 let lastSentAt = 0;
 const keys = new Set<string>();
 
@@ -60,6 +109,14 @@ lobbyUI.innerHTML = `
   <div id="noticeText" style="min-height:22px;color:#fbbf24;margin-bottom:8px;"></div>
   <div id="teamCountText" style="margin-bottom:8px;">Blue 0/4 | Red 0/4</div>
   <div id="playerList" style="white-space:pre-line;margin-bottom:16px;"></div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+    <label style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-size:14px;">名字</span>
+      <select id="nameSelect" style="padding:10px 12px;font-size:16px;min-width:180px;"></select>
+    </label>
+  </div>
+
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <button id="blueBtn" style="padding:12px 18px;font-size:16px;">Blue Team</button>
     <button id="redBtn" style="padding:12px 18px;font-size:16px;">Red Team</button>
@@ -75,6 +132,17 @@ const playerList = lobbyUI.querySelector("#playerList") as HTMLDivElement;
 const blueBtn = lobbyUI.querySelector("#blueBtn") as HTMLButtonElement;
 const redBtn = lobbyUI.querySelector("#redBtn") as HTMLButtonElement;
 const readyBtn = lobbyUI.querySelector("#readyBtn") as HTMLButtonElement;
+const nameSelect = lobbyUI.querySelector("#nameSelect") as HTMLSelectElement;
+
+function fillSelectOptions() {
+  nameSelect.innerHTML = NAME_POOL.map(
+    (name) => `<option value="${name}">${name}</option>`
+  ).join("");
+
+  nameSelect.value = myName;
+}
+
+fillSelectOptions();
 
 function updateLobbyHeader() {
   phaseText.innerText =
@@ -101,8 +169,9 @@ function updatePlayerList() {
     const team = p.team ?? "none";
     const ready = p.ready ? "ready" : "not ready";
     const kind = p.isBot ? "AI" : "human";
-    const character = p.character || "warrior";
-    return `${shortId}${me} | ${team} | ${character} | ${ready} | ${kind}`;
+    const character = p.character || "Warrior";
+    const name = p.name || "unnamed";
+    return `${shortId}${me} | ${name} | ${team} | ${character} | ${ready} | ${kind}`;
   });
 
   playerList.innerText = lines.join("\n");
@@ -253,7 +322,10 @@ room.onMessage("state", (state: Record<string, PlayerState>) => {
     myPos = { x: me.x, z: me.z };
     myReady = me.ready;
     myTeam = me.team;
+    myName = me.name || myName;
+    myCharacter = me.character || myCharacter;
     readyBtn.innerText = myReady ? "Unready" : "Ready";
+    nameSelect.value = myName;
   }
 
   if (currentPhase === "game") {
@@ -267,6 +339,12 @@ blueBtn.onclick = () => {
 
 redBtn.onclick = () => {
   room.send("select_team", "red");
+};
+
+nameSelect.onchange = () => {
+  myName = nameSelect.value;
+  myCharacter = NAME_TO_CHARACTER[myName] ?? "Warrior";
+  room.send("select_name", myName);
 };
 
 readyBtn.onclick = () => {
@@ -323,6 +401,9 @@ function updateLocalPlayer(dt: number) {
     }
   }
 }
+
+// 進房後先送名字，讓 server 自動對應角色
+room.send("select_name", myName);
 
 updateLobbyHeader();
 updateTeamCountText();

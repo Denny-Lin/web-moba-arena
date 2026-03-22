@@ -11,17 +11,42 @@ type PlayerPos = {
 type PlayerState = PlayerPos & {
   ready: boolean;
   character: string;
+  name: string;
   team: Team | null;
   slotIndex: number | null;
   isBot: boolean;
   hp: number;
-  clientId: string;
-  disconnected: boolean;
 };
+
+const NAME_TO_CHARACTER: Record<string, string> = {
+  Aiden: "Warrior",
+  Mia: "Mage",
+  Noah: "Archer",
+  Luna: "Assassin",
+  Kai: "Tank",
+  Nova: "Healer",
+  Ezra: "Ranger",
+  Ruby: "Knight",
+  Leo: "Warrior",
+  Ivy: "Mage",
+  Zane: "Archer",
+  Milo: "Assassin",
+  Aria: "Tank",
+  Finn: "Healer",
+  Nora: "Ranger",
+  Jasper: "Knight",
+  Ella: "Warrior",
+  Toby: "Mage",
+  Cora: "Archer",
+  Riven: "Assassin",
+};
+
+function getCharacterForName(name: string): string {
+  return NAME_TO_CHARACTER[name] ?? "Warrior";
+}
 
 export class MyRoom extends Room {
   private players: Record<string, PlayerState> = {};
-
   private phase: GamePhase = "lobby";
 
   private teamSlots: Record<Team, Array<string | null>> = {
@@ -29,20 +54,13 @@ export class MyRoom extends Room {
     red: [null, null, null, null],
   };
 
-  private clientIdToSessionId: Record<string, string> = {};
-  private sessionIdToClientId: Record<string, string> = {};
-  private pendingDisconnectTimers: Record<string, NodeJS.Timeout> = {};
-
-  private readonly RECONNECT_WINDOW_MS = 10000;
+  private botLoop?: NodeJS.Timeout;
 
   onCreate() {
     console.log("🟢 room created: moba_room");
 
     this.onMessage("select_team", (client: Client, team: Team) => {
       if (this.phase !== "lobby") return;
-
-      const player = this.players[client.sessionId];
-      if (!player || player.isBot || player.disconnected) return;
 
       const wantedTeam = team === "red" ? "red" : "blue";
       const ok = this.assignTeam(client.sessionId, wantedTeam);
@@ -52,17 +70,24 @@ export class MyRoom extends Room {
         return;
       }
 
-      player.ready = false;
+      const player = this.players[client.sessionId];
+      if (player) {
+        player.ready = false;
+      }
+
       this.broadcast("state", this.players);
     });
 
-    this.onMessage("select_character", (client: Client, character: string) => {
+    this.onMessage("select_name", (client: Client, name: string) => {
       if (this.phase !== "lobby") return;
 
       const player = this.players[client.sessionId];
-      if (!player || player.isBot || player.disconnected) return;
+      if (!player || player.isBot) return;
 
-      player.character = String(character || "warrior");
+      const pickedName = String(name || "Aiden");
+      player.name = pickedName;
+      player.character = getCharacterForName(pickedName);
+
       this.broadcast("state", this.players);
     });
 
@@ -70,7 +95,7 @@ export class MyRoom extends Room {
       if (this.phase !== "lobby") return;
 
       const player = this.players[client.sessionId];
-      if (!player || player.isBot || player.disconnected) return;
+      if (!player || player.isBot) return;
 
       if (!player.team || player.slotIndex === null) {
         client.send("notice", "Choose a team first");
@@ -87,8 +112,7 @@ export class MyRoom extends Room {
       if (this.phase !== "game") return;
 
       const player = this.players[client.sessionId];
-      if (!player || player.isBot || player.disconnected) return;
-      if (player.team === null || player.slotIndex === null) return;
+      if (!player || player.isBot) return;
 
       this.players[client.sessionId] = {
         ...player,
@@ -100,52 +124,22 @@ export class MyRoom extends Room {
     });
   }
 
-  onJoin(client: Client, options: { clientId?: string } = {}) {
-    const clientId = options.clientId || client.sessionId;
+  onJoin(client: Client) {
+    const defaultName = "Aiden";
 
-    const pendingTimer = this.pendingDisconnectTimers[clientId];
-    if (pendingTimer) {
-      clearTimeout(pendingTimer);
-      delete this.pendingDisconnectTimers[clientId];
-    }
-
-    const existingSessionId = this.clientIdToSessionId[clientId];
-    const existingPlayer = existingSessionId ? this.players[existingSessionId] : undefined;
-
-    // Reconnect: same clientId, new sessionId
-    if (existingPlayer && existingSessionId && existingSessionId !== client.sessionId) {
-      this.replacePlayerSession(existingSessionId, client.sessionId, clientId);
-
-      const player = this.players[client.sessionId];
-      player.disconnected = false;
-
-      console.log(`🔁 ${clientId} reconnected as ${client.sessionId}`);
-
-      client.send("phase", this.phase);
-      client.send("state", this.players);
-      this.broadcast("state", this.players);
-      return;
-    }
-
-    // New join
     this.players[client.sessionId] = {
       x: 0,
       z: 0,
       ready: false,
-      character: "warrior",
+      character: getCharacterForName(defaultName),
+      name: defaultName,
       team: null,
       slotIndex: null,
       isBot: false,
       hp: 100,
-      clientId,
-      disconnected: false,
     };
 
-    this.clientIdToSessionId[clientId] = client.sessionId;
-    this.sessionIdToClientId[client.sessionId] = clientId;
-
     console.log(`✅ ${client.sessionId} joined`);
-
     client.send("phase", this.phase);
     client.send("state", this.players);
     this.broadcast("state", this.players);
@@ -153,67 +147,18 @@ export class MyRoom extends Room {
 
   onLeave(client: Client) {
     const player = this.players[client.sessionId];
-    const clientId = this.sessionIdToClientId[client.sessionId];
 
-    if (!player) return;
-
-    if (player.isBot) {
-      delete this.players[client.sessionId];
-      this.broadcast("state", this.players);
-      return;
+    if (player && !player.isBot) {
+      this.releaseTeamSlot(client.sessionId);
     }
 
-    // Mark as temporarily disconnected, keep slot reserved for reconnect window
-    player.disconnected = true;
-    this.broadcast("state", this.players);
+    delete this.players[client.sessionId];
 
-    if (clientId && !this.pendingDisconnectTimers[clientId]) {
-      this.pendingDisconnectTimers[clientId] = setTimeout(() => {
-        this.finalizeDisconnect(client.sessionId, clientId);
-      }, this.RECONNECT_WINDOW_MS);
-    }
+    console.log(`👋 ${client.sessionId} left`);
 
-    console.log(`👋 ${client.sessionId} left (temporary disconnect)`);
-  }
+    const hasHumans = Object.values(this.players).some((p) => !p.isBot);
 
-  onDispose() {
-    this.stopBotLoop();
-    Object.values(this.pendingDisconnectTimers).forEach((t) => clearTimeout(t));
-    console.log("room disposed");
-  }
-
-  private finalizeDisconnect(sessionId: string, clientId: string) {
-    const player = this.players[sessionId];
-
-    delete this.pendingDisconnectTimers[clientId];
-
-    if (!player) {
-      delete this.clientIdToSessionId[clientId];
-      delete this.sessionIdToClientId[sessionId];
-      return;
-    }
-
-    // If the player reconnected, the sessionId mapping will have changed.
-    const mappedSessionId = this.clientIdToSessionId[clientId];
-    if (mappedSessionId && mappedSessionId !== sessionId) {
-      return;
-    }
-
-    if (player.team !== null && player.slotIndex !== null) {
-      this.releaseTeamSlot(sessionId);
-    }
-
-    delete this.players[sessionId];
-    delete this.clientIdToSessionId[clientId];
-    delete this.sessionIdToClientId[sessionId];
-
-    console.log(`🧹 ${sessionId} fully removed after timeout`);
-
-    const hasActiveHumans = Object.values(this.players).some(
-      (p) => !p.isBot && !p.disconnected
-    );
-
-    if (!hasActiveHumans) {
+    if (!hasHumans) {
       this.resetRoomToLobby();
       return;
     }
@@ -225,30 +170,14 @@ export class MyRoom extends Room {
     this.broadcast("state", this.players);
   }
 
-  private replacePlayerSession(oldSessionId: string, newSessionId: string, clientId: string) {
-    const oldPlayer = this.players[oldSessionId];
-    if (!oldPlayer) return;
-
-    if (oldPlayer.team !== null && oldPlayer.slotIndex !== null) {
-      this.teamSlots[oldPlayer.team][oldPlayer.slotIndex] = newSessionId;
-    }
-
-    delete this.players[oldSessionId];
-    delete this.sessionIdToClientId[oldSessionId];
-
-    this.players[newSessionId] = {
-      ...oldPlayer,
-      clientId,
-      disconnected: false,
-    };
-
-    this.clientIdToSessionId[clientId] = newSessionId;
-    this.sessionIdToClientId[newSessionId] = clientId;
+  onDispose() {
+    this.stopBotLoop();
+    console.log("room disposed");
   }
 
   private assignTeam(playerId: string, team: Team): boolean {
     const player = this.players[playerId];
-    if (!player || player.isBot || player.disconnected) return false;
+    if (!player || player.isBot) return false;
 
     const currentTeam = player.team;
     const currentSlot = player.slotIndex;
@@ -289,13 +218,10 @@ export class MyRoom extends Room {
   private checkStartGame() {
     if (this.phase !== "lobby") return;
 
-    const humans = Object.values(this.players).filter(
-      (p) => !p.isBot && !p.disconnected
-    );
-
+    const humans = Object.entries(this.players).filter(([, p]) => !p.isBot);
     if (humans.length === 0) return;
 
-    const allReady = humans.every((p) => p.ready && p.team !== null);
+    const allReady = humans.every(([, p]) => p.ready && p.team !== null);
     if (!allReady) return;
 
     this.startGame();
@@ -353,20 +279,19 @@ export class MyRoom extends Room {
           x: spawn.x,
           z: spawn.z,
           ready: true,
-          character: "bot",
+          character: "Bot",
+          name: botId,
           team,
           slotIndex: i,
           isBot: true,
           hp: 100,
-          clientId: botId,
-          disconnected: false,
         };
       }
     }
   }
 
   private placeAllPlayersAtSpawn() {
-    for (const [id, player] of Object.entries(this.players)) {
+    for (const [, player] of Object.entries(this.players)) {
       if (player.team === null || player.slotIndex === null) continue;
 
       const spawn = this.getSpawnPosition(player.team, player.slotIndex);
@@ -403,9 +328,9 @@ export class MyRoom extends Room {
   private updateBots() {
     if (this.phase !== "game") return;
 
-    const botIds = Object.keys(this.players).filter((id) => this.players[id].isBot);
-
-    let changed = false;
+    const botIds = Object.entries(this.players)
+      .filter(([, p]) => p.isBot)
+      .map(([id]) => id);
 
     for (const botId of botIds) {
       const bot = this.players[botId];
@@ -422,11 +347,10 @@ export class MyRoom extends Room {
         const step = 0.06;
         bot.x += (dx / dist) * step;
         bot.z += (dz / dist) * step;
-        changed = true;
       }
     }
 
-    if (changed) {
+    if (botIds.length > 0) {
       this.broadcast("state", this.players);
     }
   }
@@ -441,7 +365,6 @@ export class MyRoom extends Room {
     for (const [id, player] of Object.entries(this.players)) {
       if (id === botId) continue;
       if (player.team === bot.team) continue;
-      if (player.disconnected) continue;
 
       const dx = player.x - bot.x;
       const dz = player.z - bot.z;
@@ -458,13 +381,6 @@ export class MyRoom extends Room {
 
   private resetRoomToLobby() {
     this.stopBotLoop();
-
-    for (const timer of Object.values(this.pendingDisconnectTimers)) {
-      clearTimeout(timer);
-    }
-    this.pendingDisconnectTimers = {};
-    this.clientIdToSessionId = {};
-    this.sessionIdToClientId = {};
 
     this.phase = "lobby";
     this.players = {};
