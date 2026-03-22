@@ -1,9 +1,18 @@
 import * as THREE from "three";
 import { Client } from "colyseus.js";
 
-type PlayerPos = {
+type Team = "blue" | "red";
+type Phase = "lobby" | "game";
+
+type PlayerState = {
   x: number;
   z: number;
+  ready: boolean;
+  character: string;
+  team: Team | null;
+  slotIndex: number | null;
+  isBot: boolean;
+  hp: number;
 };
 
 const hostname = window.location.hostname;
@@ -15,52 +24,120 @@ const SERVER_URL =
     ? "ws://192.168.1.232:2567"
     : "wss://your-render-url.onrender.com";
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x222222);
-
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-camera.position.set(0, 14, 14);
-camera.lookAt(0, 0, 0);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-dirLight.position.set(10, 20, 10);
-scene.add(dirLight);
-
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 40),
-  new THREE.MeshStandardMaterial({ color: 0x4a4a4a })
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
-
 const client = new Client(SERVER_URL);
 const room = await client.joinOrCreate("moba_room");
 
 console.log("Connecting to:", SERVER_URL);
 console.log("My sessionId:", room.sessionId);
 
-const playerMeshes = new Map<string, THREE.Mesh>();
+let currentPhase: Phase = "lobby";
+let players: Record<string, PlayerState> = {};
+let myPos = { x: 0, z: 0 };
+let myReady = false;
+let myTeam: Team | null = null;
+let lastSentAt = 0;
 const keys = new Set<string>();
 
-let myPos: PlayerPos = { x: 0, z: 0 };
-let lastSentAt = 0;
+let scene: THREE.Scene | null = null;
+let camera: THREE.PerspectiveCamera | null = null;
+let renderer: THREE.WebGLRenderer | null = null;
+let clock: THREE.Clock | null = null;
 
-room.onMessage("state", (players: Record<string, PlayerPos>) => {
-  console.log("state:", players);
+const playerMeshes = new Map<string, THREE.Mesh>();
 
-  for (const [sessionId, pos] of Object.entries(players)) {
+const lobbyUI = document.createElement("div");
+lobbyUI.style.position = "fixed";
+lobbyUI.style.inset = "0";
+lobbyUI.style.background = "#1f1f1f";
+lobbyUI.style.color = "white";
+lobbyUI.style.fontFamily = "sans-serif";
+lobbyUI.style.padding = "16px";
+lobbyUI.style.boxSizing = "border-box";
+lobbyUI.style.zIndex = "10";
+
+lobbyUI.innerHTML = `
+  <div id="phaseText" style="font-size:20px;margin-bottom:8px;">Lobby - choose a team and ready up</div>
+  <div id="noticeText" style="min-height:22px;color:#fbbf24;margin-bottom:8px;"></div>
+  <div id="teamCountText" style="margin-bottom:8px;">Blue 0/4 | Red 0/4</div>
+  <div id="playerList" style="white-space:pre-line;margin-bottom:16px;"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button id="blueBtn" style="padding:12px 18px;font-size:16px;">Blue Team</button>
+    <button id="redBtn" style="padding:12px 18px;font-size:16px;">Red Team</button>
+    <button id="readyBtn" style="padding:12px 18px;font-size:16px;">Ready</button>
+  </div>
+`;
+document.body.appendChild(lobbyUI);
+
+const phaseText = lobbyUI.querySelector("#phaseText") as HTMLDivElement;
+const noticeText = lobbyUI.querySelector("#noticeText") as HTMLDivElement;
+const teamCountText = lobbyUI.querySelector("#teamCountText") as HTMLDivElement;
+const playerList = lobbyUI.querySelector("#playerList") as HTMLDivElement;
+const blueBtn = lobbyUI.querySelector("#blueBtn") as HTMLButtonElement;
+const redBtn = lobbyUI.querySelector("#redBtn") as HTMLButtonElement;
+const readyBtn = lobbyUI.querySelector("#readyBtn") as HTMLButtonElement;
+
+function updateLobbyHeader() {
+  phaseText.innerText =
+    currentPhase === "lobby"
+      ? "Lobby - choose a team and ready up"
+      : "Game Started";
+}
+
+function updateTeamCountText() {
+  const blueHumans = Object.values(players).filter(
+    (p) => !p.isBot && p.team === "blue"
+  ).length;
+  const redHumans = Object.values(players).filter(
+    (p) => !p.isBot && p.team === "red"
+  ).length;
+
+  teamCountText.innerText = `Blue ${blueHumans}/4 | Red ${redHumans}/4`;
+}
+
+function updatePlayerList() {
+  const lines = Object.entries(players).map(([id, p]) => {
+    const shortId = id.slice(0, 5);
+    const me = id === room.sessionId ? " (you)" : "";
+    const team = p.team ?? "none";
+    const ready = p.ready ? "ready" : "not ready";
+    const kind = p.isBot ? "AI" : "human";
+    const character = p.character || "warrior";
+    return `${shortId}${me} | ${team} | ${character} | ${ready} | ${kind}`;
+  });
+
+  playerList.innerText = lines.join("\n");
+  updateTeamCountText();
+}
+
+function showNotice(text: string) {
+  noticeText.innerText = text;
+  setTimeout(() => {
+    if (noticeText.innerText === text) {
+      noticeText.innerText = "";
+    }
+  }, 2000);
+}
+
+function getMaterialColor(player: PlayerState, isSelf: boolean) {
+  if (isSelf) {
+    return player.team === "blue" ? 0x60a5fa : 0xf87171;
+  }
+
+  if (player.team === "blue") {
+    return player.isBot ? 0x1d4ed8 : 0x3b82f6;
+  }
+
+  if (player.team === "red") {
+    return player.isBot ? 0xb91c1c : 0xef4444;
+  }
+
+  return 0x999999;
+}
+
+function syncMeshes() {
+  if (!scene) return;
+
+  for (const [sessionId, player] of Object.entries(players)) {
     let mesh = playerMeshes.get(sessionId);
 
     if (!mesh) {
@@ -69,29 +146,134 @@ room.onMessage("state", (players: Record<string, PlayerPos>) => {
       mesh = new THREE.Mesh(
         new THREE.BoxGeometry(1, 1, 1),
         new THREE.MeshStandardMaterial({
-          color: isSelf ? 0x00ff88 : 0xff4444,
+          color: getMaterialColor(player, isSelf),
         })
       );
 
       mesh.position.y = 0.5;
+      mesh.scale.setScalar(isSelf ? 1.12 : 1);
       scene.add(mesh);
       playerMeshes.set(sessionId, mesh);
     }
 
-    mesh.position.set(pos.x, 0.5, pos.z);
-
-    if (sessionId === room.sessionId) {
-      myPos = { x: pos.x, z: pos.z };
-    }
+    const isSelf = sessionId === room.sessionId;
+    mesh.material = new THREE.MeshStandardMaterial({
+      color: getMaterialColor(player, isSelf),
+    });
+    mesh.scale.setScalar(isSelf ? 1.12 : 1);
+    mesh.position.set(player.x, 0.5, player.z);
   }
 
   for (const [sessionId, mesh] of playerMeshes.entries()) {
     if (!players[sessionId]) {
-      scene.remove(mesh);
+      scene?.remove(mesh);
       playerMeshes.delete(sessionId);
     }
   }
+}
+
+function startGameScene() {
+  if (scene) return;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x222222);
+
+  camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+  camera.position.set(0, 14, 14);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  document.body.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(10, 20, 10);
+  scene.add(dirLight);
+
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(40, 40),
+    new THREE.MeshStandardMaterial({ color: 0x4a4a4a })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+
+  clock = new THREE.Clock();
+
+  syncMeshes();
+
+  const animate = () => {
+    if (!scene || !camera || !renderer || !clock) return;
+
+    requestAnimationFrame(animate);
+
+    const dt = clock.getDelta();
+    updateLocalPlayer(dt);
+
+    renderer.render(scene, camera);
+  };
+
+  animate();
+
+  window.addEventListener("resize", () => {
+    if (!camera || !renderer) return;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
+
+room.onMessage("phase", (phase: Phase) => {
+  currentPhase = phase;
+  updateLobbyHeader();
+
+  if (phase === "game") {
+    lobbyUI.style.display = "none";
+    startGameScene();
+  }
 });
+
+room.onMessage("notice", (msg: string) => {
+  showNotice(msg);
+});
+
+room.onMessage("state", (state: Record<string, PlayerState>) => {
+  players = state;
+  updatePlayerList();
+
+  const me = players[room.sessionId];
+  if (me) {
+    myPos = { x: me.x, z: me.z };
+    myReady = me.ready;
+    myTeam = me.team;
+    readyBtn.innerText = myReady ? "Unready" : "Ready";
+  }
+
+  if (currentPhase === "game") {
+    syncMeshes();
+  }
+});
+
+blueBtn.onclick = () => {
+  room.send("select_team", "blue");
+};
+
+redBtn.onclick = () => {
+  room.send("select_team", "red");
+};
+
+readyBtn.onclick = () => {
+  myReady = !myReady;
+  readyBtn.innerText = myReady ? "Unready" : "Ready";
+  room.send("ready", myReady);
+};
 
 window.addEventListener("keydown", (e) => {
   keys.add(e.key.toLowerCase());
@@ -101,11 +283,11 @@ window.addEventListener("keyup", (e) => {
   keys.delete(e.key.toLowerCase());
 });
 
-const clock = new THREE.Clock();
-
 function updateLocalPlayer(dt: number) {
-  const speed = 6 * dt;
+  if (currentPhase !== "game") return;
+  if (!scene) return;
 
+  const speed = 6 * dt;
   let moved = false;
   const nextPos = { ...myPos };
 
@@ -142,19 +324,6 @@ function updateLocalPlayer(dt: number) {
   }
 }
 
-function animate() {
-  requestAnimationFrame(animate);
-
-  const dt = clock.getDelta();
-  updateLocalPlayer(dt);
-
-  renderer.render(scene, camera);
-}
-
-animate();
-
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+updateLobbyHeader();
+updateTeamCountText();
+updatePlayerList();
