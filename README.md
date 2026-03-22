@@ -14,6 +14,7 @@ mobile).
 -   Mobile-friendly controls
 -   Lightweight & optimized for low-end devices
 -   Stateless matches (no database required)
+- Environment-based server switching (local / production)
 
 ------------------------------------------------------------------------
 
