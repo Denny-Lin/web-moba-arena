@@ -67,12 +67,11 @@ const RECONNECT_TOKEN_KEY = "moba_reconnection_token";
 
 const hostname = window.location.hostname;
 
-const SERVER_URL =
-  hostname === "localhost" ||
-  hostname === "127.0.0.1" ||
-  hostname.startsWith("192.168")
-    ? "ws://192.168.1.232:2567"
-    : "wss://web-moba-arena.onrender.com";
+const SERVER_URL = "wss://web-moba-arena.onrender.com";
+//const SERVER_URL =
+  //hostname === "localhost" || hostname === "127.0.0.1"
+    //? "ws://localhost:2567"
+    //: "wss://web-moba-arena.onrender.com";
 
 const client = new Client(SERVER_URL);
 
@@ -459,7 +458,15 @@ readyBtn.onclick = () => {
 };
 
 window.addEventListener("keydown", (e) => {
-  keys.add(e.key.toLowerCase());
+  const key = e.key.toLowerCase();
+
+  if (key === "escape") {
+    e.preventDefault();
+    confirmLeaveGame();
+    return;
+  }
+
+  keys.add(key);
 });
 
 window.addEventListener("keyup", (e) => {
@@ -504,6 +511,26 @@ function updateLocalPlayer(dt: number) {
       room.send("move", { x: myPos.x, z: myPos.z });
       lastSentAt = now;
     }
+  }
+}
+
+function leaveGame() {
+  try {
+    room.leave();
+  } catch (e) {
+    console.warn(e);
+  }
+
+  sessionStorage.removeItem(RECONNECT_TOKEN_KEY);
+  localStorage.removeItem(ROOM_ID_KEY);
+
+  location.reload();
+}
+
+function confirmLeaveGame() {
+  const ok = confirm("Leave the game?");
+  if (ok) {
+    leaveGame();
   }
 }
 

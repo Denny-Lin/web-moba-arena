@@ -19,5 +19,5 @@ gameServer.define("moba_room", MyRoom);
 const PORT = Number(process.env.PORT ?? 2567);
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 後端大腦已啟動：ws://localhost:${PORT}`);
+  console.log(`Backend brain activated: ws://localhost:${PORT}`);
 });
