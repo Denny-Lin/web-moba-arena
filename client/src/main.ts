@@ -62,6 +62,8 @@ const NAME_TO_CHARACTER: Record<string, string> = {
   Riven: "Assassin",
 };
 
+const RECONNECT_TOKEN_KEY = "moba_reconnection_token";
+
 const hostname = window.location.hostname;
 
 const SERVER_URL =
@@ -72,7 +74,40 @@ const SERVER_URL =
     : "wss://your-render-url.onrender.com";
 
 const client = new Client(SERVER_URL);
-const room = await client.joinOrCreate("moba_room");
+
+function getSavedToken() {
+  return sessionStorage.getItem(RECONNECT_TOKEN_KEY);
+}
+
+function saveToken(token: string) {
+  sessionStorage.setItem(RECONNECT_TOKEN_KEY, token);
+}
+
+function clearToken() {
+  sessionStorage.removeItem(RECONNECT_TOKEN_KEY);
+}
+
+async function connectRoom() {
+  const savedToken = getSavedToken();
+
+  if (savedToken) {
+    try {
+      console.log("🔄 trying reconnect...");
+      const r = await client.reconnect(savedToken);
+      saveToken(r.reconnectionToken);
+      return r;
+    } catch (err) {
+      console.warn("Reconnect failed, joining a new room.", err);
+      clearToken();
+    }
+  }
+
+  const r = await client.joinOrCreate("moba_room");
+  saveToken(r.reconnectionToken);
+  return r;
+}
+
+const room = await connectRoom();
 
 console.log("Connecting to:", SERVER_URL);
 console.log("My sessionId:", room.sessionId);
@@ -356,6 +391,11 @@ nameSelect.onchange = () => {
 };
 
 readyBtn.onclick = () => {
+  if (myTeam === null) {
+    showNotice("先選隊伍");
+    return;
+  }
+
   myReady = !myReady;
   readyBtn.innerText = myReady ? "Unready" : "Ready";
   room.send("ready", myReady);
@@ -410,7 +450,6 @@ function updateLocalPlayer(dt: number) {
   }
 }
 
-// 進房後先送名字，讓 server 自動對應角色
 room.send("select_name", myName);
 
 updateLobbyHeader();

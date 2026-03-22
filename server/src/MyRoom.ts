@@ -145,16 +145,55 @@ export class MyRoom extends Room {
     this.broadcast("state", this.players);
   }
 
-  onLeave(client: Client) {
-    const player = this.players[client.sessionId];
+  onLeave(client: Client, consented: boolean) {
+    const sessionId = client.sessionId;
+    const player = this.players[sessionId];
+    if (!player) return;
 
-    if (player && !player.isBot) {
-      this.releaseTeamSlot(client.sessionId);
+    if (!consented) {
+      console.log(`⏳ ${sessionId} disconnected, waiting for reconnect...`);
+
+      this.allowReconnection(client, 30)
+        .then((reconnectedClient) => {
+          console.log(`🔁 ${reconnectedClient.sessionId} reconnected`);
+          reconnectedClient.send("phase", this.phase);
+          reconnectedClient.send("state", this.players);
+          this.broadcast("state", this.players);
+        })
+        .catch(() => {
+          console.log(`❌ ${sessionId} failed to reconnect`);
+          this.finalizeLeave(sessionId);
+        });
+
+      return;
     }
 
-    delete this.players[client.sessionId];
+    this.finalizeLeave(sessionId);
+  }
 
-    console.log(`👋 ${client.sessionId} left`);
+  onReconnect(client: Client) {
+    console.log(`🔁 ${client.sessionId} reconnected`);
+    client.send("phase", this.phase);
+    client.send("state", this.players);
+    this.broadcast("state", this.players);
+  }
+
+  onDispose() {
+    this.stopBotLoop();
+    console.log("room disposed");
+  }
+
+  private finalizeLeave(sessionId: string) {
+    const player = this.players[sessionId];
+    if (!player) return;
+
+    if (!player.isBot) {
+      this.releaseTeamSlot(sessionId);
+    }
+
+    delete this.players[sessionId];
+
+    console.log(`👋 ${sessionId} removed`);
 
     const hasHumans = Object.values(this.players).some((p) => !p.isBot);
 
@@ -168,11 +207,6 @@ export class MyRoom extends Room {
     }
 
     this.broadcast("state", this.players);
-  }
-
-  onDispose() {
-    this.stopBotLoop();
-    console.log("room disposed");
   }
 
   private assignTeam(playerId: string, team: Team): boolean {
