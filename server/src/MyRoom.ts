@@ -56,6 +56,10 @@ export class MyRoom extends Room {
 
   private botLoop?: NodeJS.Timeout;
 
+  async onAuth() {
+    return this.phase !== "game";
+  }
+
   onCreate() {
     console.log("🟢 room created: moba_room");
 
@@ -125,6 +129,11 @@ export class MyRoom extends Room {
   }
 
   onJoin(client: Client) {
+    if (this.phase === "game") {
+      client.send("notice", "Game is already in progress");
+      return;
+    }
+
     const defaultName = "Aiden";
 
     this.players[client.sessionId] = {
@@ -145,30 +154,16 @@ export class MyRoom extends Room {
     this.broadcast("state", this.players);
   }
 
-  onLeave(client: Client, consented: boolean) {
+  async onDrop(client: Client) {
     const sessionId = client.sessionId;
-    const player = this.players[sessionId];
-    if (!player) return;
 
-    if (!consented) {
-      console.log(`⏳ ${sessionId} disconnected, waiting for reconnect...`);
+    console.log(`⏳ ${sessionId} disconnected, waiting for reconnect...`);
 
-      this.allowReconnection(client, 30)
-        .then((reconnectedClient) => {
-          console.log(`🔁 ${reconnectedClient.sessionId} reconnected`);
-          reconnectedClient.send("phase", this.phase);
-          reconnectedClient.send("state", this.players);
-          this.broadcast("state", this.players);
-        })
-        .catch(() => {
-          console.log(`❌ ${sessionId} failed to reconnect`);
-          this.finalizeLeave(sessionId);
-        });
-
-      return;
+    try {
+      await this.allowReconnection(client, 30);
+    } catch {
+      this.finalizeLeave(sessionId);
     }
-
-    this.finalizeLeave(sessionId);
   }
 
   onReconnect(client: Client) {
@@ -176,6 +171,11 @@ export class MyRoom extends Room {
     client.send("phase", this.phase);
     client.send("state", this.players);
     this.broadcast("state", this.players);
+  }
+
+  onLeave(client: Client, consented: boolean) {
+    if (!consented) return;
+    this.finalizeLeave(client.sessionId);
   }
 
   onDispose() {
@@ -265,6 +265,8 @@ export class MyRoom extends Room {
     if (this.phase === "game") return;
 
     this.phase = "game";
+    this.lock();
+
     console.log("🎮 game started");
 
     this.syncBotsForCurrentMatch();
@@ -417,6 +419,8 @@ export class MyRoom extends Room {
     this.stopBotLoop();
 
     this.phase = "lobby";
+    this.unlock();
+
     this.players = {};
     this.teamSlots = {
       blue: [null, null, null, null],

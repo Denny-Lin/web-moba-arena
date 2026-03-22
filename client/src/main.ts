@@ -62,6 +62,7 @@ const NAME_TO_CHARACTER: Record<string, string> = {
   Riven: "Assassin",
 };
 
+const ROOM_ID_KEY = "moba_room_id";
 const RECONNECT_TOKEN_KEY = "moba_reconnection_token";
 
 const hostname = window.location.hostname;
@@ -75,6 +76,14 @@ const SERVER_URL =
 
 const client = new Client(SERVER_URL);
 
+function getSavedRoomId() {
+  return localStorage.getItem(ROOM_ID_KEY);
+}
+
+function saveRoomId(roomId: string) {
+  localStorage.setItem(ROOM_ID_KEY, roomId);
+}
+
 function getSavedToken() {
   return sessionStorage.getItem(RECONNECT_TOKEN_KEY);
 }
@@ -87,27 +96,68 @@ function clearToken() {
   sessionStorage.removeItem(RECONNECT_TOKEN_KEY);
 }
 
-async function connectRoom() {
-  const savedToken = getSavedToken();
+function renderFatalError(message: string) {
+  document.body.innerHTML = `
+    <div style="
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#111827;
+      color:white;
+      font-family:sans-serif;
+      padding:24px;
+      box-sizing:border-box;
+      text-align:center;
+    ">
+      <div style="max-width:560px;background:#1f2937;border:1px solid #374151;border-radius:20px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,0.35);">
+        <div style="font-size:28px;font-weight:700;margin-bottom:12px;">無法加入房間</div>
+        <div style="font-size:16px;line-height:1.7;opacity:0.9;">${message}</div>
+      </div>
+    </div>
+  `;
+}
 
-  if (savedToken) {
+async function connectRoom() {
+  const token = getSavedToken();
+
+  if (token) {
     try {
       console.log("🔄 trying reconnect...");
-      const r = await client.reconnect(savedToken);
+      const r = await client.reconnect(token);
       saveToken(r.reconnectionToken);
+      saveRoomId(r.roomId);
       return r;
     } catch (err) {
-      console.warn("Reconnect failed, joining a new room.", err);
+      console.warn("Reconnect failed.", err);
       clearToken();
     }
   }
 
+  const roomId = getSavedRoomId();
+  if (roomId) {
+    const r = await client.joinById(roomId);
+    saveToken(r.reconnectionToken);
+    saveRoomId(r.roomId);
+    return r;
+  }
+
   const r = await client.joinOrCreate("moba_room");
   saveToken(r.reconnectionToken);
+  saveRoomId(r.roomId);
   return r;
 }
 
-const room = await connectRoom();
+let room: any;
+try {
+  room = await connectRoom();
+} catch (err) {
+  console.error(err);
+  renderFatalError(
+    "這個房間目前可能已經在遊戲中，或是暫時無法加入。請回到第一個視窗，或清掉舊的房間資訊後再試一次。"
+  );
+  throw err;
+}
 
 console.log("Connecting to:", SERVER_URL);
 console.log("My sessionId:", room.sessionId);
@@ -186,6 +236,12 @@ function fillSelectOptions() {
 }
 
 fillSelectOptions();
+
+function updateReadyButtonState() {
+  readyBtn.disabled = myTeam === null;
+  readyBtn.style.opacity = myTeam === null ? "0.5" : "1";
+  readyBtn.style.cursor = myTeam === null ? "not-allowed" : "pointer";
+}
 
 function updateLobbyHeader() {
   phaseText.innerText =
@@ -369,6 +425,7 @@ room.onMessage("state", (state: Record<string, PlayerState>) => {
     myCharacter = me.character || myCharacter;
     readyBtn.innerText = myReady ? "Unready" : "Ready";
     nameSelect.value = myName;
+    updateReadyButtonState();
   }
 
   if (currentPhase === "game") {
@@ -451,7 +508,10 @@ function updateLocalPlayer(dt: number) {
 }
 
 room.send("select_name", myName);
+saveToken(room.reconnectionToken);
+saveRoomId(room.roomId);
 
 updateLobbyHeader();
 updateTeamCountText();
 updatePlayerList();
+updateReadyButtonState();
