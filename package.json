@@ -1,0 +1,21 @@
+{
+  "name": "web-moba-arena",
+  "version": "1.0.0",
+  "description": "A lightweight 3D multiplayer arena game built with **Three.js** and **Colyseus**, designed to run directly in the browser (desktop & mobile).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Denny-Lin/web-moba-arena.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Denny-Lin/web-moba-arena/issues"
+  },
+  "homepage": "https://github.com/Denny-Lin/web-moba-arena#readme"
+}
