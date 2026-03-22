@@ -147,3 +147,53 @@ cd client && npm run dev
 - Stateless architecture (no persistent data storage)
 - Server resets do not impact gameplay sessions
 - Optimized for small matches (2–10 players)
+
+## Roadmap
+
+### Phase 1 — Core Prototype
+- Basic 3D scene (map, camera, player)
+- Player movement (keyboard + mobile joystick)
+- Simple multiplayer sync (player position)
+
+### Phase 2 — Gameplay
+- Skill system (Q / W / E / R)
+- Basic combat (hit detection, damage)
+- Health system (HP / MP)
+- UI integration (skills, HUD)
+
+### Phase 3 — Game Systems
+- Minion AI (lane pushing)
+- Tower system
+- Simple win condition
+
+### Phase 4 — Polish
+- Visual improvements (effects, animations)
+- Mobile UX optimization
+- Performance optimization
+
+---
+
+## Team Responsibilities (2 Developers)
+
+### Developer A — Frontend / Client
+- Three.js scene (map, camera, rendering)
+- Player controls (keyboard + touch)
+- UI implementation (HTML/CSS overlay)
+- Skill input handling
+
+---
+
+### Developer B — Backend / Multiplayer
+- Colyseus server setup
+- Room management
+- Player synchronization
+- Game logic (combat, state updates)
+- Minion AI & game rules
+
+---
+
+### Shared Tasks
+- Game design decisions
+- Balancing gameplay
+- Debugging & testing
+
