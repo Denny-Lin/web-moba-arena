@@ -72,7 +72,7 @@ const SERVER_URL =
   hostname === "127.0.0.1" ||
   hostname.startsWith("192.168")
     ? "ws://192.168.1.232:2567"
-    : "wss://your-render-url.onrender.com";
+    : "wss://web-moba-arena.onrender.com";
 
 const client = new Client(SERVER_URL);
 
@@ -154,7 +154,7 @@ try {
 } catch (err) {
   console.error(err);
   renderFatalError(
-    "這個房間目前可能已經在遊戲中，或是暫時無法加入。請回到第一個視窗，或清掉舊的房間資訊後再試一次。"
+    "This room is currently in a match or unavailable. Please return to your original session or clear saved data and try again."
   );
   throw err;
 }

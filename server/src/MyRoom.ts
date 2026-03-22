@@ -124,7 +124,6 @@ export class MyRoom extends Room {
     });
   }
 
-  // 不要用 onAuth 卡 game；用 lock/unlock 控制新玩家加入即可
   onJoin(client: Client) {
     if (this.phase === "game") {
       client.leave(4001);
