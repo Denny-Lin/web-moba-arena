@@ -1,74 +1,95 @@
 # Web MOBA Arena
 
-A lightweight 3D multiplayer arena game built with Three.js and Colyseus, designed to run directly in the browser (desktop & mobile).
+A lightweight 3D multiplayer browser game built with Three.js and Colyseus, designed to run directly in the browser.
 
---- 
+## Live Demo
+- Frontend: https://web-moba-arena-ak3x.vercel.app
+- Backend: https://web-moba-arena.onrender.com
 
 ## Preview
-
 <img width="1536" height="1024" alt="sample" src="https://github.com/user-attachments/assets/5e047207-cdd0-4d7b-a891-073bd0c314b4" />
 
----
-
 ## Overview
-Web MOBA Arena is a real-time multiplayer browser game inspired by MOBA-style gameplay (e.g. League of Legends / 魔獸信長).
 
-The project focuses on:
-- Fast iteration
-- Lightweight performance
-- Easy deployment
-- Real-time multiplayer architecture
-
----
+Web MOBA Arena is a real-time browser-based multiplayer arena game inspired by MOBA-style gameplay. It focuses on fast iteration, lightweight rendering, and a simple but solid multiplayer architecture.
 
 ## Features
 
-- Browser-based (no installation required)
-- Real-time multiplayer (WebSocket)
-- Arena-style gameplay
-- Mobile-friendly controls
-- Stateless matches (no database required)
-- Reconnection system (refresh-safe)
-- Room locking (no mid-game join)
+- Browser-based gameplay, no install required
+- Real-time multiplayer with WebSocket
+- Three.js 3D rendering
+- Lobby system with team selection and ready-up
+- Name-based character mapping
+- Room locking during active matches
+- Reconnection support for refresh-safe sessions
 - Multi-tab safe session handling
-- Optimized for low-end devices
-
----
+- ESC to leave the game
+- Lightweight and optimized for low-end devices
+- Stateless matches, no database required
 
 ## Tech Stack
 
 ### Client
-- Three.js (3D rendering)
-- TypeScript / JavaScript
+- Three.js
+- TypeScript
 - WebGL
+- Vite
 
 ### Server
-- Colyseus (multiplayer framework)
+- Colyseus
 - Node.js
 - WebSocket
 
----
+### Deployment
+- Frontend: Vercel
+- Backend: Render
 
 ## Architecture
 
-```
 Client (Browser / Mobile)
-- Rendering (Three.js)
-- Input Handling
+- Three.js rendering
+- Input handling
+- UI overlay
+- Reconnect handling
 
-        ↓ WebSocket
+↓ WebSocket
 
 Server (Colyseus)
-- Game State
-- Player Sync
-- Game Logic
-```
+- Room management
+- Player synchronization
+- Team assignment
+- Ready system
+- Reconnection handling
+- Match lifecycle
 
----
+## Gameplay Flow
 
-## Getting Started
+1. Player opens the game
+2. Selects a name
+3. Name maps to a character automatically
+4. Chooses a team
+5. Ready up
+6. Match starts
+7. Players move around the arena
+8. ESC to leave the room
+9. If the last player leaves, the room resets to lobby
 
-### 1. Clone repository
+## Current Status
+
+This project is currently developed by one developer.
+
+The current build already includes:
+- Lobby flow
+- Team selection
+- Ready system
+- Character mapping
+- Room locking
+- Reconnection support
+- Deployed frontend and backend
+
+## Development Setup
+
+### 1. Clone the repository
 ```bash
 git clone https://github.com/your-username/web-moba-arena.git
 ```
@@ -159,6 +180,27 @@ The architecture is designed to be:
 A second developer may join in the future.
 
 ---
+
+## Reset / Troubleshooting
+
+If you encounter issues such as:
+- Unable to join a room
+- Stuck in a previous session
+- Reconnection errors
+
+You can clear your local session data:
+
+DevTools (Right Click → Inspect)
+
+1. Right click → **Inspect**
+2. Go to **Console**
+3. Run:
+
+```js
+localStorage.clear();
+sessionStorage.clear();
+location.reload();
+```
 
 ## Roadmap
 
