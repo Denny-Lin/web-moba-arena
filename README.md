@@ -1,22 +1,8 @@
 # Web MOBA Arena
 
-A lightweight 3D multiplayer arena game built with **Three.js** and
-**Colyseus**, designed to run directly in the browser (desktop &
-mobile).
+A lightweight 3D multiplayer arena game built with Three.js and Colyseus, designed to run directly in the browser (desktop & mobile).
 
-------------------------------------------------------------------------
-
-## Features
-
--   Browser-based (no install required)
--   Real-time multiplayer (WebSocket)
--   Arena-style gameplay (inspired by MOBA / 魔獸信長 / LOL)
--   Mobile-friendly controls
--   Lightweight & optimized for low-end devices
--   Stateless matches (no database required)
-- Environment-based server switching (local / production)
-
-------------------------------------------------------------------------
+--- 
 
 ## Preview
 
@@ -24,177 +10,208 @@ mobile).
 
 ---
 
+## Overview
+Web MOBA Arena is a real-time multiplayer browser game inspired by MOBA-style gameplay (e.g. League of Legends / 魔獸信長).
+
+The project focuses on:
+- Fast iteration
+- Lightweight performance
+- Easy deployment
+- Real-time multiplayer architecture
+
+---
+
+## Features
+
+- Browser-based (no installation required)
+- Real-time multiplayer (WebSocket)
+- Arena-style gameplay
+- Mobile-friendly controls
+- Stateless matches (no database required)
+- Reconnection system (refresh-safe)
+- Room locking (no mid-game join)
+- Multi-tab safe session handling
+- Optimized for low-end devices
+
+---
+
 ## Tech Stack
 
 ### Client
-
--   Three.js -- 3D rendering
--   JavaScript / TypeScript
--   WebGL
+- Three.js (3D rendering)
+- TypeScript / JavaScript
+- WebGL
 
 ### Server
+- Colyseus (multiplayer framework)
+- Node.js
+- WebSocket
 
--   Colyseus -- Multiplayer game server
--   Node.js
--   WebSocket
-
-------------------------------------------------------------------------
+---
 
 ## Architecture
 
 ```
-Client (Browser / Mobile) 
-- Three.js (Rendering)
+Client (Browser / Mobile)
+- Rendering (Three.js)
 - Input Handling
-    ↓
-WebSocket
-    ↓
+
+        ↓ WebSocket
+
 Server (Colyseus)
 - Game State
 - Player Sync
-- Combat Logic
+- Game Logic
 ```
-
-------------------------------------------------------------------------
-
-## Deployment
-| Layer     | Technology        | Hosting |
-|----------|------------------|--------|
-| Client   | Three.js (WebGL) | Browser |
-| Server   | Colyseus (Node)  | Render |
-| Protocol | WebSocket        | - |
 
 ---
 
-### 1. Clone repo
+## Getting Started
 
+### 1. Clone repository
+```bash
 git clone https://github.com/your-username/web-moba-arena.git
+```
 
 ### 2. Install dependencies
-
-cd server && npm install\
-cd client && npm install
+```bash
+cd server && npm install
+cd ../client && npm install
+```
 
 ### 3. Run locally
+```bash
+cd server && npm start
+cd ../client && npm run dev
+```
 
-cd server && npm start\
-cd client && npm run dev
-
-------------------------------------------------------------------------
+---
 
 ## Gameplay Flow
 
-1.  Player enters the game
-2.  Selects a character
-3.  Joins a match (room)
-4.  Battles other players
-5.  Match ends → restart
-
-### Game Mode
-
-- Simple room-based multiplayer (no matchmaking system)
-- Players join a room and start playing immediately
-- No lobby, ranking, or queue system
-- Designed for quick sessions and easy testing
-
-------------------------------------------------------------------------
-
-## Scaling & Hosting Options
-
-### Current Setup (Render - Free Tier)
-- Suitable for: 2–10 players
-- Pros:
-  - Free and easy to deploy
-  - Good for development and demos
-- Cons:
-  - Cold start delay (~30–60s)
-  - Server sleeps when inactive
-  - Shared CPU (minor performance fluctuation)
+1. Player enters the game
+2. Selects a character
+3. Joins a room
+4. Battles other players
+5. Match ends → restart
 
 ---
 
-### Alternative Hosting Options
+## Game Mode
+
+- Simple room-based multiplayer
+- No matchmaking or ranking system
+- Designed for quick sessions and testing
+
+---
+
+## Deployment
+
+| Layer   | Technology            | Hosting |
+|--------|---------------------|--------|
+| Client | Three.js (WebGL)    | Browser |
+| Server | Colyseus (Node.js)  | Render |
+| Protocol | WebSocket         | - |
+
+---
+
+## Hosting Options
+
+### Current (Render - Free Tier)
+- Suitable: 2–10 players
+- Pros:
+  - Free
+  - Easy deployment
+- Cons:
+  - Cold start delay
+  - Server sleeps
+
+### Alternatives
 
 #### Fly.io
-- Suitable for: 2–30 players
-- Pros:
-  - No cold start (always running)
-  - Better real-time performance
-- Cost:
-  - ~$1–5/month for small instances
+- 2–30 players
+- No cold start
+- ~$1–5/month
+
+#### VPS (DigitalOcean / Vultr)
+- 10–50+ players
+- Stable performance
+- ~$5/month
 
 ---
 
-#### VPS (e.g. DigitalOcean / Vultr)
-- Suitable for: 10–50+ players (depending on optimization)
-- Pros:
-  - Full control over server
-  - Stable performance (dedicated resources)
-- Cost:
-  - ~$5/month (basic server)
+## Scaling Strategy
+
+1. Start with Render (development)
+2. Move to Fly.io (real-time stability)
+3. Upgrade to VPS (scaling users)
 
 ---
 
-### Scaling Strategy
+## Current Status
 
-- Start with Render (development & testing)
-- Move to Fly.io when real-time experience is needed
-- Upgrade to VPS when player count increases
+This project is currently developed by **one developer**.
+
+The architecture is designed to be:
+- Easy to extend
+- Easy for collaborators to onboard
+
+A second developer may join in the future.
+
+---
+
+## Roadmap
+
+### Phase 1 — Core (Done)
+- Multiplayer sync
+- Movement system
+- Room management
+- Reconnection system
+- Session handling
+
+### Phase 2 — Gameplay (In Progress)
+- Combat system
+- Health system (HP)
+- Basic skills
+
+### Phase 3 — Systems
+- Minions (AI)
+- Towers
+- Win conditions
+
+### Phase 4 — Polish
+- Visual effects
+- UI/UX improvements
+- Performance optimization
+
+---
+
+## Future Team Structure
+
+When expanded to 2 developers:
+
+### Frontend (Client)
+- Three.js scene
+- Controls (keyboard/mobile)
+- UI / HUD
+- Input handling
+
+### Backend (Server)
+- Colyseus server
+- Room lifecycle
+- Game logic
+- AI systems
+
+### Shared
+- Game design
+- Balancing
+- Testing
 
 ---
 
 ## Notes
 
-- Stateless architecture (no persistent data storage)
-- Server resets do not impact gameplay sessions
+- Stateless architecture
+- No database required
+- Server resets do not affect gameplay
 - Optimized for small matches (2–10 players)
-
-## Roadmap
-
-### Phase 1 — Core Prototype
-- Basic 3D scene (map, camera, player)
-- Player movement (keyboard + mobile joystick)
-- Simple multiplayer sync (player position)
-
-### Phase 2 — Gameplay
-- Skill system (Q / W / E / R)
-- Basic combat (hit detection, damage)
-- Health system (HP / MP)
-- UI integration (skills, HUD)
-
-### Phase 3 — Game Systems
-- Minion AI (lane pushing)
-- Tower system
-- Simple win condition
-
-### Phase 4 — Polish
-- Visual improvements (effects, animations)
-- Mobile UX optimization
-- Performance optimization
-
----
-
-## Team Responsibilities (2 Developers)
-
-### Developer A — Frontend / Client
-- Three.js scene (map, camera, rendering)
-- Player controls (keyboard + touch)
-- UI implementation (HTML/CSS overlay)
-- Skill input handling
-
----
-
-### Developer B — Backend / Multiplayer
-- Colyseus server setup
-- Room management
-- Player synchronization
-- Game logic (combat, state updates)
-- Minion AI & game rules
-
----
-
-### Shared Tasks
-- Game design decisions
-- Balancing gameplay
-- Debugging & testing
-
