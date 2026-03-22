@@ -67,8 +67,11 @@ const RECONNECT_TOKEN_KEY = "moba_reconnection_token";
 
 const hostname = window.location.hostname;
 
-const SERVER_URL = "wss://web-moba-arena.onrender.com";
-//const SERVER_URL =
+const SERVER_URL =
+  import.meta.env.VITE_SERVER_URL ??
+  "wss://web-moba-arena.onrender.com";
+  
+  //const SERVER_URL =
   //hostname === "localhost" || hostname === "127.0.0.1"
     //? "ws://localhost:2567"
     //: "wss://web-moba-arena.onrender.com";
