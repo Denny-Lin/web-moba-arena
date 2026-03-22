@@ -94,33 +94,41 @@ let clock: THREE.Clock | null = null;
 
 const playerMeshes = new Map<string, THREE.Mesh>();
 
+document.body.style.margin = "0";
+document.body.style.overflow = "hidden";
+
 const lobbyUI = document.createElement("div");
 lobbyUI.style.position = "fixed";
 lobbyUI.style.inset = "0";
 lobbyUI.style.background = "#1f1f1f";
 lobbyUI.style.color = "white";
 lobbyUI.style.fontFamily = "sans-serif";
-lobbyUI.style.padding = "16px";
-lobbyUI.style.boxSizing = "border-box";
 lobbyUI.style.zIndex = "10";
+lobbyUI.style.display = "flex";
+lobbyUI.style.alignItems = "center";
+lobbyUI.style.justifyContent = "center";
+lobbyUI.style.padding = "24px";
+lobbyUI.style.boxSizing = "border-box";
 
 lobbyUI.innerHTML = `
-  <div id="phaseText" style="font-size:20px;margin-bottom:8px;">Lobby - choose a team and ready up</div>
-  <div id="noticeText" style="min-height:22px;color:#fbbf24;margin-bottom:8px;"></div>
-  <div id="teamCountText" style="margin-bottom:8px;">Blue 0/4 | Red 0/4</div>
-  <div id="playerList" style="white-space:pre-line;margin-bottom:16px;"></div>
+  <div style="width:100%;max-width:760px;background:#262626;border:1px solid #3a3a3a;border-radius:20px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,0.35);">
+    <div id="phaseText" style="font-size:28px;font-weight:700;margin-bottom:12px;text-align:center;">Lobby - choose a team and ready up</div>
+    <div id="noticeText" style="min-height:24px;color:#fbbf24;margin-bottom:12px;text-align:center;"></div>
+    <div id="teamCountText" style="margin-bottom:14px;text-align:center;font-size:18px;">Blue 0/4 | Red 0/4</div>
+    <div id="playerList" style="white-space:pre-line;margin-bottom:20px;text-align:center;line-height:1.6;font-size:16px;"></div>
 
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
-    <label style="display:flex;flex-direction:column;gap:6px;">
-      <span style="font-size:14px;">名字</span>
-      <select id="nameSelect" style="padding:10px 12px;font-size:16px;min-width:180px;"></select>
-    </label>
-  </div>
+    <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+      <label style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+        <span style="font-size:14px;">名字</span>
+        <select id="nameSelect" style="padding:12px 14px;font-size:16px;min-width:220px;border-radius:12px;border:1px solid #555;background:#111;color:white;"></select>
+      </label>
+    </div>
 
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <button id="blueBtn" style="padding:12px 18px;font-size:16px;">Blue Team</button>
-    <button id="redBtn" style="padding:12px 18px;font-size:16px;">Red Team</button>
-    <button id="readyBtn" style="padding:12px 18px;font-size:16px;">Ready</button>
+    <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+      <button id="blueBtn" style="padding:14px 22px;font-size:16px;border-radius:12px;border:none;cursor:pointer;">Blue Team</button>
+      <button id="redBtn" style="padding:14px 22px;font-size:16px;border-radius:12px;border:none;cursor:pointer;">Red Team</button>
+      <button id="readyBtn" style="padding:14px 22px;font-size:16px;border-radius:12px;border:none;cursor:pointer;">Ready</button>
+    </div>
   </div>
 `;
 document.body.appendChild(lobbyUI);
